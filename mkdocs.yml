@@ -1,0 +1,31 @@
+site_name: MCStatusBot Docs
+
+theme:
+    name: readthedocs
+    highlightjs: true
+    hljs_languages:
+        - yaml
+        - rust
+        - javascript
+        - typescript
+    analytics:
+        gtag: G-DVE61PE35G
+
+markdown_extensions:
+  - footnotes
+  # - attr_list
+  # - pymdownx.arithmatex
+  # - pymdownx.superfences
+  # - pymdownx.details
+  # - pymdownx.magiclink
+  # - pymdownx.tasklist:
+  #     custom_checkbox: true
+#  - pymdownx.emoji:
+#      emoji_generator: !!python/name:pymdownx.emoji.to_svg
+  # - admonition
+  - toc:
+      permalink: true
+
+plugins:
+  - search
+  - roamlinks
