@@ -1,0 +1,26 @@
+{
+  "name": "mcstatusbot",
+  "version": "3.0.0",
+  "description": "A Discord bot that makes it easy to display, log and graph the status and statistics of a Minecraft server.",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/404invalid-user/MCStatusBot.git"
+  },
+  "author": "404invalid-user (invaliduser@bruvland.com)",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/404invalid-user/MCStatusBot/issues"
+  },
+  "homepage": "https://github.com/404invalid-user/MCStatusBot#readme",
+  "dependencies": {
+    "discord.js": "^14.0.3",
+    "discord.js-rate-limiter": "^1.3.2"
+  }
+}
