@@ -1,4 +1,4 @@
-# self hosting
+# self hosting main bot
 
 self host your own version of the bot to get past the api rate limit and get faster updates 
 
