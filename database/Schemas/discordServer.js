@@ -11,25 +11,7 @@ const serverSchema = new Schema({
     timezone: { type: String, required: false },
     Bedrock: { type: Boolean, required: false },
     Logging: { type: Boolean, default: false },
-    StatusChannId: { type: String, required: false },
-    NumberChannId: { type: String, required: false },
-    MemberChannEnabled: { type: Boolean, required: false },
-    ping: {
-        status: { type: String, required: false },
-        motd: { type: Object, required: false },
-        members: { type: String, required: false },
-        maxMembers: { type: String, required: false }
-    },
-    checker: {
-        channel: {
-            status: { type: String, required: false },
-            members: { type: String, required: false }
-        },
-        notification: {
-            status: { type: String, required: false },
-            members: { type: String, required: false }
-        }
-    },
+  
     CategoryId: { type: String, required: false },
     config: {
         notifications: {
