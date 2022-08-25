@@ -1,4 +1,3 @@
-
 /*
  * this api is private and purerly for bot -> website backend comunication so the access code gets shared with no-one!
  * you dont even look at it if thats possible and no no passwords no Hunter1 you want a randomly generated string 
@@ -8,6 +7,11 @@
  * 
  * why have this in the first place so the website can go down for updates when the bot stays up and vise versa
 */
+const logger = require('../log');
+const express = require('express');
+const api = express();
 
 
-const express = require('express')
+api.listen(process.env.PORT, () => {
+    logger.success("api is running on 0.0.0.0:"  + process.env.PORT);
+});

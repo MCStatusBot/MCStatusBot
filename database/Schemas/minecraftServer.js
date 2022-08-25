@@ -9,8 +9,11 @@ const serverSchema = new Schema({
     ip: str(),
     port: str(),
     domain: str(),
-    motd: str(),
-    status: str(),
+    motd: {
+        html:str(),
+        clean: str()
+    },
+    online: bol,
     members: str(),
     maxMembers: str(),
     lastUpadted: str("1104476400"),
