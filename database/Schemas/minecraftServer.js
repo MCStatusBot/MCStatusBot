@@ -1,7 +1,7 @@
 const { Schema, model } = require('mongoose');
 
 const str = (defaultTxt) =>  defaultTxt ? {type: String, required: true, default: defaultTxt} : {type: String, required: false};
-const bol = { type: Boolean, required: false };
+const bol = { type: Boolean, required: true, default: false };
 
 const serverSchema = new Schema({
     id: str(""),
@@ -10,7 +10,7 @@ const serverSchema = new Schema({
     port: str(),
     domain: str(),
     motd: {
-        html:str(),
+        html: str(),
         clean: str()
     },
     online: bol,
@@ -20,7 +20,7 @@ const serverSchema = new Schema({
     bluemapurl: str(),
     timezone: str("GMT"),
     Bedrock: bol,
-    logging: bol
-}, { versionKey: false })
+    logs: bol
+}, { versionKey: false });
 
 module.exports = model('minecraftserver', serverSchema);

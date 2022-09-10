@@ -4,15 +4,13 @@ const serverSchema = new Schema({
     id: { type: String, required: true },
     name: { type: String, required: false },
     icon: { type: String, required:  false},
+
+    //example object that will be in this array { "id": "aaa000", "channelStatus": { "enabled": true, "instantUpdate": false, "lastUpdated": "1104476400", "category": "000", "status": "000", "playerCount": "000" }, "messageStatus": {"enabled": true, "lastUpdated": "1104476400", "channel": "000", "message": "000"}}
     mcServers: { type: Array, required: true, default: []},
 
-
-    bluemapurl: { type: String, required: false },
+    //id of main default server (for things when you use the log and ping commands without giving a mc server id, domain, ip:port)
+    mainServer: "",
     timezone: { type: String, required: false },
-    Bedrock: { type: Boolean, required: false },
-    Logging: { type: Boolean, default: false },
-  
-    CategoryId: { type: String, required: false },
     config: {
         notifications: {
             webhook: {
@@ -64,6 +62,6 @@ const serverSchema = new Schema({
             }
         }
     }
-}, { versionKey: false })
+}, { versionKey: false });
 
 module.exports = model('discordserver', serverSchema);
