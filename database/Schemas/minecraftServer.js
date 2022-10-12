@@ -1,4 +1,4 @@
-const { Schema, model } = require('mongoose');
+const { Schema, model } = require("mongoose");
 
 const str = (defaultTxt) =>  defaultTxt ? {type: String, required: true, default: defaultTxt} : {type: String, required: false};
 const bol = { type: Boolean, required: true, default: false };
@@ -23,4 +23,4 @@ const serverSchema = new Schema({
     logs: bol
 }, { versionKey: false });
 
-module.exports = model('minecraftserver', serverSchema);
+module.exports = model("minecraftserver", serverSchema);

@@ -6,6 +6,8 @@ const processlog = require('../log');
 const emailNotification = require('./emailNotification');
 const wait = (s) => new Promise((resolve) => setTimeout(resolve, parseFloat(s.toString() + '000')));
 
+const genEmbed = require('./functions/genembed');
+
 module.exports = (botShardingManager) => {
     processlog.info('starting pinger service');
     const pingInterval = parseInt(process.env.PINGER_INTERVAL);
@@ -32,21 +34,21 @@ async function pinger(botShardingManager) {
         const mcServer = await lookup('minecraftserver', sv.id);
         //make the server ping
         const serverStats = await pingServer(mcServer);
-        if (mcServer.logs) await addmcServerLogs(mcServer, serverStats.playersSample);
+        if (mcServer.logs) await addmcServerStatusLogs(mcServer, serverStats.playersSample);
         
         await emailNotification(mcServer);
-        await discordServerUpdater(botShardingManager, mcServer);
+        await discordGuildUpdater(botShardingManager, mcServer);
         await wait(1);
     }
 }
 
 /**
- * adds the logs from information collected for this ping time 
+ * adds the logs from information collected this ping time 
  * @param {Object} mcServer - the minecraft server object returned from lookup
  * @param {*} playersSample - the playersample returned from mc server utils
  * @returns 
  */
-async function addmcServerLogs(mcServer, playersSample) {
+async function addmcServerStatusLogs(mcServer, playersSample) {
     const genid = uuid.v4().replaceAll('-','');
     const playernames = playersSample.map((obj) => obj.name);
     await db.create('minecraftserverlog', genid, {
@@ -63,19 +65,19 @@ async function addmcServerLogs(mcServer, playersSample) {
 
 
 /**
- * loop though discord servers and update their channels and messages
+ * loop though discord guilds and update their channels and messages
  * @param {*} botShardingManager - the bots sharding manager
  * @param {Object} mcServer - the minecraft server object returned from lookup
  * @returns 
  */
-async function discordServerUpdater(botShardingManager, mcServer) {
-    const discordServers = await db.getAll('discordserver');
-    for (const dcg of discordServers) {
+async function discordGuildUpdater(botShardingManager, mcServer) {
+    const discordGuilds = await db.getAll('discordguild');
+    for (const dcg of discordGuilds) {
         //move to nex guild if this guild isnt monitoring this mc server
         if (dcg.mcServers.filter(mcss => mcss.id == mcServer.id)[0] == undefined) continue;
 
-        //use lookup funtion so we can save server data
-        const discordGuild = await db.lookup('discordserver', dcs.id);
+        //use lookup funtion so we can save guild data
+        const discordGuild = await db.lookup('discordguild', dcs.id);
         //uh what but it might happen
         if (discordGuild == undefined || discordGuild == null) {
             processlog.warn('guild id undefined when running pinger update');
@@ -88,6 +90,8 @@ async function discordServerUpdater(botShardingManager, mcServer) {
 
 }
 
+
+
 /**
  * updates server status message
  * @param {*} botShardingManager - the bots sharding manager
@@ -95,14 +99,36 @@ async function discordServerUpdater(botShardingManager, mcServer) {
  * @param {Object} discordGuild - the discord guild object returned from lookup
  * @returns 
  */
-async function runMessageInstantUpdates(botShardingManager, mcServer, discordGuild) {
-    //TODO: not done need to implament chech to see if in one message mode and update that while getting info from other mc servers to update it
-    function editMessage(c, { arg }) {
-        c.guilds.cache.get(arg.discordGuild.id).channels.cache.get(arg.guildMcInfo.messageStatus.channel).messages.fetch(arg.guildMcInfo.messageStatus.message).edit({embeds: [{}]});
+async function runMessageInstantUpdates(botShardingManager, mcServer, guild) {
+    const guildMcInfo = guild.mcServers.filter(mcss => mcss.id == mcServer.id)[0];
+    if (guildMcInfo.messageStatus.enabled === false) return;
+
+    let mcServers = [];
+    if (guild.statusMessage.multipleMessageMode === false) {
+        for await (const gms of guild.mcServers) {
+            //skip servers that have message status disabled 
+            if (gms.messageStatus.enabled == false) continue;
+            const getMcServer = await db.cache.lookup('minecraftserver', gms.id);
+            if (getMcServer == null) continue;
+            mcServers.push(getMcServer);
+        }
     }
-    const guildMcInfo = discordGuild.mcServers.filter(mcss => mcss.id == mcServer.id)[0];
-    botShardingManager.broadcastEval(editMessage, { context: { arg: {discordGuild, guildMcInfo, mcServer} } });
+    function editMessage(c, { guild, channel, message, embed,loggerError  }) {
+        try {
+            c.guilds.cache.get(guild).channels.cache.get(channel).messages.fetch(message).edit({embeds: [embed]});
+        } catch (err) {
+            //TODO: check how server owner wants to get errors and send errors to owners dms, owners email or log channel
+            //TODO: add error event to guild logs
+            loggerError(err.stack || err);
+        }
+    }
+    botShardingManager.broadcastEval(editMessage, { context: { guild: guild.id, channel: guildMcInfo.channel, message: guildMcInfo.message, embed: genEmbed(guild, mcSever, mcServers), loggerError: processlog.error } });
+    //update last updated time
+    guildMcInfo.lastUpdated = Date.now().toString();
+    guild.save();
 }
+
+
 
 /**
  * updates channels for the lucky few that have instant channel updates 
@@ -113,7 +139,7 @@ async function runMessageInstantUpdates(botShardingManager, mcServer, discordGui
  */
 async function runChannelInstantUpdates(botShardingManager, mcServer, discordGuild) {
     //TODO: change language based on servers set language
-    async function editMessage(c, { arg }) {
+    async function editChannel(c, { arg }) {
         if (arg.mcServer.online) {
             await c.guilds.cache.get(arg.discordGuild.id).channels.cache.get(arg.guildMcInfo.channelStatus.status).setName('🟢 ONLINE').catch((e) => arg.loggerwarn('Error updating channel (prob rate limit):' + e));
         } else {
@@ -123,10 +149,11 @@ async function runChannelInstantUpdates(botShardingManager, mcServer, discordGui
     }
     const guildMcInfo = discordGuild.mcServers.filter(mcss => mcss.id == mcServer.id)[0];
     try {
-        botShardingManager.broadcastEval(editMessage, { context: { arg: {discordGuild, guildMcInfo, mcServer, loggerwarn: processlog.warn} } });
+        botShardingManager.broadcastEval(editChannel, { context: { arg: {discordGuild, guildMcInfo, mcServer, loggerwarn: processlog.warn} } });
         guildMcInfo.channelStatus.lastUpdated = Date.now().toString();
         await discordGuild.save();
     } catch (err) {
 
     }
 }
+

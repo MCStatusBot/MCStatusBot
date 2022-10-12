@@ -9,4 +9,4 @@ you can self host this bot too with the cool guide.
 
 the full bot same everything as the public one [here](https://docs.mcstatusbot.site/selfhosting/)
 
-a lite one which handles only one server and is easy to setup [here](https://docs.mcstatusbot.site/selfhosting-lite/)
+a lite one which handles only one discord guild and is easy to setup [here](https://docs.mcstatusbot.site/selfhosting-lite/)

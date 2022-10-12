@@ -6,11 +6,11 @@ const mongoose = require('mongoose');
 let redisClient;
 const schemas = {
     user: require('./Schemas/user'),
-    discordserver: require('./Schemas/discordServer'),
+    discordguild: require('./Schemas/discordGuild'),
     minecraftserver: require('./Schemas/minecraftServer'),
     websitethemes: require('./Schemas/websiteThemes'),
 
-    emailstatuschangenotification: require('./Schemas/emailStatusChangeNotifications')
+    emailnotification: require('./Schemas/emailNotifications')
 };
 
 

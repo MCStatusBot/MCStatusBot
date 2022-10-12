@@ -12,9 +12,9 @@ module.exports.run = (client, interaction) => {
     const limited = rateLimiter.take(interaction.member.id);
     if (limited) return;
 
-    //get server
-    //const server = await lookup('server', interaction.guild.id);
-    // if (server == null) return;
+    //get guild
+    //const guild = await lookup('discordguild', interaction.guild.id);
+    // if (guild == null) return;
     if (!client.commands.has(interaction.commandName)) return;
     const command = client.commands.get(interaction.commandName);
     try {
