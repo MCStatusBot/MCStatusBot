@@ -10,6 +10,8 @@ const schemas = {
     minecraftserver: require('./Schemas/minecraftServer'),
     websitethemes: require('./Schemas/websiteThemes'),
 
+    auditlog: require('./Schemas/auditLog'),
+
     emailnotification: require('./Schemas/emailNotifications')
 };
 
@@ -20,7 +22,7 @@ const schemas = {
  * @param {Object} params 
  */
 module.exports.connect = async(params) => {
-    logger.info('starting db service')
+    logger.info('starting db service');
     // Connect to database
     await mongoose.connect(process.env.DBURI, {
         useNewUrlParser: true, 
@@ -50,7 +52,7 @@ module.exports.connect = async(params) => {
     await redisClient.flushdb(async (err, succeeded) => {
         logger.info(`Flushing Redis -  ${err ? err : succeeded}`);
         // Cache it only after redis gets flushed
-        logger.info('Started caching the databases')
+        logger.info('Started caching the databases');
   
         //loop though all scheams and cache them after flush
         for (const [key] of Object.entries(schemas)) {
@@ -87,10 +89,10 @@ module.exports.lookup = async (collection, key) => {
         return null;
     }
     let cacheValue = await redisClient.hget(collection, key);
-    var result = null
+    let result = null;
 
     if (cacheValue) {
-      result = JSON.parse(cacheValue)
+      result = JSON.parse(cacheValue);
     } else {
         // Mongo fallback
         if (process.env.DEBUG) logger.info(`${key} just fellback to mongo while looking for the ${collection} collection!`);
@@ -100,7 +102,7 @@ module.exports.lookup = async (collection, key) => {
         await redisClient.hset(collection, key, JSON.stringify(checkMongo));
         cacheValue = await redisClient.hget(collection, key);
         if (cacheValue) {
-            result = JSON.parse(cacheValue)
+            result = JSON.parse(cacheValue);
         }
     }
 
