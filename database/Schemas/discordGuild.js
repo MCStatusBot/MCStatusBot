@@ -1,61 +1,120 @@
-const { Schema, model } = require("mongoose");
-const str = (defaultTxt) =>  defaultTxt ? {type: String, required: true, default: defaultTxt} : {type: String, required: false};
-const bol = { type: Boolean, required: true, default:false };
-
-const serverSchema = new Schema({
-    id: str(""),
-    name: str(""),
-    icon: str(""),
-    timezone: str("GMT"),
-
-    //example object that will be in this array { "id": "aaa000", "name": "test mc server", "channelStatus": { "enabled": true, "instantUpdate": false, "lastUpdated": "1104476400", "category": "000", "status": "000", "playerCount": "000" }, "messageStatus": {"enabled": true, "lastUpdated": "1104476400", "channel": "000", "message": "000"}}
-    mcServers: { type: Array, required: true, default: []},
-
-    //id of main default server (for things when you use the log and ping commands without giving a mc server id, domain, ip:port)
-    mainServer: "",
-
-    statusMessage: {
-        multipleMessageMode: bol,
-        title: str("[[ICON_server]] [[server_name]]'s status"),
-        description: str("the server status of [[server_ip]][[server_port_wc]]"),
-        statusText: str("```ip: [[server_ip]]\nstatus: offline\nversion: [[server_version]]\nplayers: [[server_players]]/[[server_players_max]]```"),
-        image: str("https://mcstatusbot.site/icons/[[server_id]].png"),
-        color: {
-            online: str("#22ff00"),
-            offline: str("#ff0000"),
-        }
-    },
-
-    chart: {
-        embed: {
-            uptime: {
-                title: str("[[server_ip]]'s uptime"),
-                description: str("[[server_ip]] was up for [[server_uptime]] minutes and down for [[server_downtime]] minutes. This means that [[server_ip]] has a uptime percentage of [[server_online_percent]] and downtime percentage of [[server_offline_percent]]"),
-                color: str("#FFFFF")
-            },
-            playersonline: {
-                title: str("Number of players online on [[server_ip]]"),
-                description: str("There have been a maximum of [[server_players_max]] players online at once, and a minimum of [[server_players_min]]."),
-                color: str("#FFFFF")
-            },
-            mostactive: {
-                title: str("Most active players on [[server_ip]] in the last 24 hours"),
-                description: str("[[server_mostactive]] was the most active player with [[server_mostactive_minutes]] minutes spent online in the last 24 hours."),
-                color: str("#FFFFF")
-            }
+const { DataTypes } = require("sequelize");
+module.exports = (sequelize) => {
+    const DiscordGuild = sequelize.define('DiscordGuild', {
+        id: {
+            type: DataTypes.STRING,
+            primaryKey: true
         },
-        graph: {
-            text: {
-                title: str("253, 253, 253"),
-                time: str("253, 253, 253"),
-                state: str("253, 253, 253")
-            },
-            line: {
-                fill: str("8, 174, 228"),
-                border: str("39, 76, 113")
-            }
-        }
-    }
-}, { versionKey: false });
+        name: {
+            type: DataTypes.STRING,
+        },
+        icon: {
+            type: DataTypes.STRING,
+            defaultValue: "none"
+        },
+        mcServers: {
+            type: DataTypes.STRING,
+            defaultValue: JSON.stringify([])
+        },
+        mainServer: {
+            type: DataTypes.STRING,
+            defaultValue: "NONE",
+        },
 
-module.exports = model("discordguild", serverSchema);
+        //mc server status embed config
+        statusMessage_title: {
+            type: DataTypes.STRING,
+            defaultValue: "[[ICONS_server]] [[server_name]]'s status",
+        },
+        statusMessage_description: {
+            type: DataTypes.STRING,
+            defaultValue: "the server status of [[server_ip]][[server_port_wc]]"
+        },
+        statusMessage_statusText: {
+            type: DataTypes.STRING,
+            defaultValue: "```ip: [[server_ip]]\nstatus: offline\nversion: [[server_version]]\nplayers: [[server_players]]/[[server_players_max]]```"
+        },
+        statusMessage_image: {
+            type: DataTypes.STRING,
+            defaultValue: "https://mcstatusbot.site/icons/[[server_id]].png"
+        },
+        statusMessage_color_online: {
+            type: DataTypes.STRING,
+            defaultValue: "#22ff00"
+        },
+        statusMessage_color_offline: {
+            type: DataTypes.STRING,
+            defaultValue: "#ff0000"
+        },
+
+        //embed config
+        //embed uptime
+        embed_uptime_title: {
+            type: DataTypes.STRING,
+            defaultValue: "[[server_ip]]'s uptime"
+        },
+        embed_uptime_description: {
+            type: DataTypes.STRING,
+            defaultValue: "[[server_ip]] was up for [[server_uptime]] minutes and down for [[server_downtime]] minutes. This means that [[server_ip]] has a uptime percentage of [[server_online_percent]] and downtime percentage of [[server_offline_percent]]"
+        },
+        embed_uptime_color: {
+            type: DataTypes.STRING,
+            defaultValue: "#FFFFF"
+        },
+
+        //embed playersonline
+        embed_playersonline_title: {
+            type: DataTypes.STRING,
+            defaultValue: "Number of players online on [[server_ip]]"
+        },
+        embed_playersonline_description: {
+            type: DataTypes.STRING,
+            defaultValue: "There have been a maximum of [[server_players_max]] players online at once, and a minimum of [[server_players_min]]."
+        },
+        embed_playersonline_color: {
+            type: DataTypes.STRING,
+            defaultValue: "#FFFFF"
+        },
+
+        //embed mostactive
+        embed_mostactive_title: {
+            type: DataTypes.STRING,
+            defaultValue: "Most active players on [[server_ip]] in the last 24 hours"
+        },
+        embed_mostactive_description: {
+            type: DataTypes.STRING,
+            defaultValue: "[[server_mostactive]] was the most active player with [[server_mostactive_minutes]] minutes spent online in the last 24 hours."
+        },
+        embed_mostactive_color: {
+            type: DataTypes.STRING,
+            defaultValue: "#FFFFF"
+        },
+
+        //embed charts config
+        //chart text
+        graph_text_title: {
+            type: DataTypes.STRING,
+            defaultValue: "253, 253, 253"
+        },
+        graph_text_time: {
+            type: DataTypes.STRING,
+            defaultValue: "253, 253, 253"
+        },
+        graph_text_state: {
+            type: DataTypes.STRING,
+            defaultValue: "253, 253, 253"
+        },
+        //chart line
+        graph_line_fill: {
+            type: DataTypes.STRING,
+            defaultValue: "8, 174, 228"
+        },
+        graph_line_border: {
+            type: DataTypes.STRING,
+            defaultValue: "39, 76, 113"
+        },
+    });
+    //adds table to db if it doesnt exist
+    DiscordGuild.sync();
+    return DiscordGuild;
+};

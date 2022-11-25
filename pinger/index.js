@@ -4,41 +4,69 @@ const pingServer = require('./ping');
 const db = require('../database/index');
 const processlog = require('../log');
 const emailNotification = require('./emailNotification');
+const TimeTaken = require('../functions/TimeTaken');
 const wait = (s) => new Promise((resolve) => setTimeout(resolve, parseFloat(s.toString() + '000')));
 
-const genEmbed = require('./functions/genembed');
+const genEmbed = require('../functions/genembed');
 
+//loop though all minecraft servers and ping them every x minutes
 module.exports = (botShardingManager) => {
     processlog.info('starting pinger service');
     const pingInterval = parseInt(process.env.PINGER_INTERVAL);
+    if (pingInterval >= 1) {
+        processlog.warn("ping interval has been set too low defaulting to every 5 minutes.\nplease consult the setup docs for more info https://docs.mcstatusbot.site/");
+    } else if (pingInterval < 60) {
+        processlog.warn("ping interval has been set too high defaulting to every 5 minutes.\nplease consult the setup docs for more info https://docs.mcstatusbot.site/");
+    }
     // Call the pinger every x minutes default to 5 if none set
-    cron.schedule(`*/${pingInterval >= 1 && pingInterval < 60 ? pingInterval : '5'} * * * *`, () => {
+    cron.schedule(`*/${pingInterval >= 1 && pingInterval < 60 ? pingInterval : '5'} * * * *`, async function() {
+        let timeTaken = new TimeTaken();
         try {
-            pinger(botShardingManager);
+            const pingerInfo = await pinger(botShardingManager);
+            timeTaken.ExtraInfo(pingerInfo);
         } catch (err) {
-            processlog.error('Error while updating mc server statuses: ' + err.stack || err);
+            processlog.error('Error while running pinger service:');
+            processlog.error(err.stack || err);
         } finally {
-            processlog.info('Done updating mc server statuses');
+            timeTaken = timeTaken.End();
+            processlog.info(`finised running pinger service\n-------------------------------\nservers pinged: ${timeTaken.extraInfo.serverCount}\nonline servers: ${timeTaken.extraInfo.onlineServers}\noffline servers: ${timeTaken.extraInfo.offlineServers}\ntotal no of online players: ${timeTaken.extraInfo.playersOnline}\ntime taken: ${timeTaken.s} secconds\n-------------------------------`);
         }
     });
-    return;
+    return processlog.info("pinger service setup now pinging servers every " + pingInterval.toString() + " minutes.");
 }
 /**
  * loop though every minecraft server then ping it
  */
 async function pinger(botShardingManager) {
     const mcServers = await db.getAll('minecraftserver');
+    let onlineServers = 0;
+    let offlineServers = 0;
+    let playersOnline = 0;
     for (const sv of mcServers) {
         if (!sv.ip || sv.ip == '' || sv.ip.length < 1) continue;
         //lookup the server se we have the save function
-        const mcServer = await lookup('minecraftserver', sv.id);
+        const mcServer = await db.lookup('minecraftserver', sv.id);
         //make the server ping
         const serverStats = await pingServer(mcServer);
-        if (mcServer.logs) await addmcServerStatusLogs(mcServer, serverStats.playersSample);
+        if (serverStats.online == true) {
+            onlineServers++;
+        } else if (serverStats.online == false) {
+            offlineServers++;
+        }
+
+        playersOnline += serverStats.playersOnline;
+        //add minecraft statuslogs
+        if (mcServer.logs) await addmcServerStatusLogs({mcServer: {id: mcServer.id}, ...serverStats});
         
         await emailNotification(mcServer);
         await discordGuildUpdater(botShardingManager, mcServer);
         await wait(1);
+    }
+    return {
+        serverCount: mcServers.length,
+        onlineServers,
+        offlineServers,
+        playersOnline
     }
 }
 
@@ -46,20 +74,20 @@ async function pinger(botShardingManager) {
  * adds the logs from information collected this ping time 
  * @param {Object} mcServer - the minecraft server object returned from lookup
  * @param {*} playersSample - the playersample returned from mc server utils
- * @returns 
+ * @returns {String} - status log id
  */
-async function addmcServerStatusLogs(mcServer, playersSample) {
+async function addmcServerStatusLogs(serverStats, mcServer, playersSample) {
     const genid = uuid.v4().replaceAll('-','');
-    const playernames = playersSample.map((obj) => obj.name);
+    const playernames = serverStats.playersSample.map((obj) => obj.name);
     await db.create('minecraftserverlog', genid, {
         id: genid,
-        mcserverid: mcServer.id,
+        mcserverid: serverStats.mcServer.serverid,
         time: Date.now().toString(),
-        online: mcServer.online,
-        playersOnline: mcServer.members,
-        playerNamesOnline:  playernames.toString()
+        online: serverStats.online,
+        playersOnline: serverStats.members,
+        playerNamesOnline:  serverStats.playernames.toString()
     });
-    return;
+    return genid;
 }
 
 
@@ -68,7 +96,7 @@ async function addmcServerStatusLogs(mcServer, playersSample) {
  * loop though discord guilds and update their channels and messages
  * @param {*} botShardingManager - the bots sharding manager
  * @param {Object} mcServer - the minecraft server object returned from lookup
- * @returns 
+ * @returns {Null}
  */
 async function discordGuildUpdater(botShardingManager, mcServer) {
     const discordGuilds = await db.getAll('discordguild');
@@ -87,7 +115,7 @@ async function discordGuildUpdater(botShardingManager, mcServer) {
         if (guildMcInfo.channelStatus.enabled == true) await runChannelInstantUpdates(botShardingManager, mcServer, discordGuild);
         await runMessageInstantUpdates(botShardingManager, mcServer, discordGuild);
     }
-
+    return;
 }
 
 
@@ -97,7 +125,7 @@ async function discordGuildUpdater(botShardingManager, mcServer) {
  * @param {*} botShardingManager - the bots sharding manager
  * @param {Object} mcServer - the minecraft server object returned from lookup
  * @param {Object} discordGuild - the discord guild object returned from lookup
- * @returns 
+ * @returns {Null}
  */
 async function runMessageInstantUpdates(botShardingManager, mcServer, guild) {
     const guildMcInfo = guild.mcServers.filter(mcss => mcss.id == mcServer.id)[0];
@@ -113,7 +141,7 @@ async function runMessageInstantUpdates(botShardingManager, mcServer, guild) {
             mcServers.push(getMcServer);
         }
     }
-    function editMessage(c, { guild, channel, message, embed,loggerError  }) {
+    function editMessage(c, { guild, channel, message, embed, loggerError  }) {
         try {
             c.guilds.cache.get(guild).channels.cache.get(channel).messages.fetch(message).edit({embeds: [embed]});
         } catch (err) {
@@ -126,6 +154,7 @@ async function runMessageInstantUpdates(botShardingManager, mcServer, guild) {
     //update last updated time
     guildMcInfo.lastUpdated = Date.now().toString();
     guild.save();
+    return;
 }
 
 
@@ -135,7 +164,7 @@ async function runMessageInstantUpdates(botShardingManager, mcServer, guild) {
  * @param {*} botShardingManager - the bots sharding manager
  * @param {Object} mcServer - the minecraft server object returned from lookup
  * @param {Object} discordGuild - the discord guild object returned from lookup
- * @returns 
+ * @returns {Null}
  */
 async function runChannelInstantUpdates(botShardingManager, mcServer, discordGuild) {
     //TODO: change language based on servers set language
@@ -153,7 +182,8 @@ async function runChannelInstantUpdates(botShardingManager, mcServer, discordGui
         guildMcInfo.channelStatus.lastUpdated = Date.now().toString();
         await discordGuild.save();
     } catch (err) {
-
+        processlog.error(err.stack||err);
     }
+    return;
 }
 

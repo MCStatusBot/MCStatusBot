@@ -1,15 +1,30 @@
-const { Schema, model } = require("mongoose");
-
-const str = (defaultTxt) =>  defaultTxt ? {type: String, required: true, default: defaultTxt} : {type: String, required: false};
-const bol = { type: Boolean, required: false };
-
-const serverSchema = new Schema({
-    id: str("t"),
-    mcserverid: str("t"),
-    time: str("t"),
-    online: bol,
-    playersOnline: str(),
-    playerNamesOnline: str()
-}, { versionKey: false })
-
-module.exports = model("minecraftserverlog", serverSchema);
+const { DataTypes } = require("sequelize");
+module.exports = (sequelize) => {
+    const MinecraftServerLog = sequelize.define('MinecraftServerLog', {
+        id: {
+            type: DataTypes.INTEGER,
+            autoIncrement: true,
+            primaryKey: true
+        },
+        mcserver: {
+            type: DataTypes.STRING,
+        },
+        time:  {
+            type: DataTypes.STRING,
+            defaultValue: Date.now().toString(),
+        },
+        online: {
+            type: DataTypes.BOOLEAN,
+            defaultValue: false
+        },
+        playersOnline: {
+            type: DataTypes.STRING,
+        },
+        playerNamesOnline: {
+            type: DataTypes.STRING,
+        }
+    });
+    //adds table to db if it doesnt exist
+    MinecraftServerLog.sync();
+    return MinecraftServerLog;
+};

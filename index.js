@@ -2,6 +2,7 @@ const { ShardingManager } = require('discord.js');
 const api = require('./api/index');
 const db = require('./database/index');
 const pinger = require('./pinger/index');
+const { startMetricsServer } = require("./utils/metrics");
 
 async function main() {
     const manager = new ShardingManager('./bot.js', { token: 'your-token-goes-here' });
@@ -15,6 +16,7 @@ async function main() {
     manager.spawn();
     //start up api
     api(manager, db);
+    startMetricsServer();
     //start up pinger
     pinger(manager);
 

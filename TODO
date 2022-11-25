@@ -1,1 +1,23 @@
-make https://docs.mcstatusbot.site/selfhosting/security
+change out mongodb code for database to sequelize found in db test dir 
+
+
+https://www.youtube.com/watch?v=HMQ-h3riqYU
+https://www.youtube.com/watch?v=9TJx7QTrTyo
+
+
+move logger to util dir and other things that would be there
+
+
+
+
+setup prom-client to get metrics on
+- db CRUDs with okstatus and time taken
+- times had to fall back to db because not in cache (only log metric if dic was found)
+- no of shards
+- express requests
+- command usage with command name and time taken 
+
+get client to work with promethius on pi server in home 
+
+make dashboard in grafana
+

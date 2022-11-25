@@ -1,6 +1,6 @@
 const { DataTypes } = require("sequelize");
 module.exports = (sequelize) => {
-    const AuditLog = sequelize.define('AuditLog', {
+    const UserSession = sequelize.define('UserSession', {
         id: {
             type: DataTypes.INTEGER,
             autoIncrement: true,
@@ -9,27 +9,35 @@ module.exports = (sequelize) => {
         user: {
             type: DataTypes.STRING,
         },
-        guild: {
+        token: {
             type: DataTypes.STRING,
-            defaultValue: "none"
         },
-        error: {
-            type: DataTypes.BOOLEAN,
-            defaultValue: false
-        },
-        date: {
+        created:  {
             type: DataTypes.STRING,
             defaultValue: Date.now().toString(),
         },
-        description: {
+        lastused:  {
+            type: DataTypes.STRING,
+            defaultValue: Date.now().toString(),
+        },
+        usecount:  {
+            type: DataTypes.INTEGER,
+            defaultValue: 0
+        },
+        ip:  {
             type: DataTypes.STRING,
         },
-        filters: {
+        regon:  {
             type: DataTypes.STRING,
-            defaultValue: JSON.stringify(["all"]),
+        },
+        browser:  {
+            type: DataTypes.STRING,
+        },
+        device:  {
+            type: DataTypes.STRING,
         },
     });
     //adds table to db if it doesnt exist
-    AuditLog.sync();
-    return AuditLog;
+    UserSession.sync();
+    return UserSession;
 };

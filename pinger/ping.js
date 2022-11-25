@@ -3,7 +3,7 @@ const util = require('minecraft-server-util');
 /**
  * pings the servers ip and returns status.
  * @param {Object} server - The minecraft server object from cache lookup.
- * @returns {Object} - server status and information.
+ * @returns {Object online, playersSample, playersOnline} - server status and information.
  */
 module.exports = async(mcServer) => {
     if (mcServer.ip.length <= 0) throw "Error: mc server must have ip";
@@ -36,11 +36,10 @@ module.exports = async(mcServer) => {
         //server is online
         mcServer.online = true;
         mcServer.members = result.players.online;
-        mcServer.maxmembers =result.players.max;
+        mcServer.maxmembers = result.players.max;
         mcServer.motd = result.motd;
-        await server.save();
     }
     mcServer.lastUpadted = Date.now().toString();
     await mcServer.save();
-    return {playersSample: result.playersSample};
+    return { playersSample: result.playersSample, online: mcServer.online, playersOnline: mcServer.members};
 }

@@ -1,38 +1,41 @@
 const fs = require('fs');
 const util = require('util');
-const logger = require('../log');
 const Redis = require('ioredis');
-const mongoose = require('mongoose');
+const { Sequelize } = require('sequelize');
+const processlog = require('../utils/processlog');
+
 let redisClient;
+const sequelize = new Sequelize(process.env.DATABASE_URL)
 const schemas = {
-    user: require('./Schemas/user'),
-    discordguild: require('./Schemas/discordGuild'),
-    minecraftserver: require('./Schemas/minecraftServer'),
-    websitethemes: require('./Schemas/websiteThemes'),
-
-    auditlog: require('./Schemas/auditLog'),
-
-    emailnotification: require('./Schemas/emailNotifications')
+    AuditLog: require('./schemas/AuditLog')(sequelize),
+    DiscordGuild: require('./schemas/DiscordGuild')(sequelize),
+    emailnotification: require('./schemas/EmailNotification')(sequelize),
+    MinecraftServer: require('./schemas/MinecraftServer')(sequelize),
+    MinecraftServerLog: require('./schemas/MinecraftServerLog')(sequelize),
+    User: require('./schemas/User')(sequelize),
+    UserSession: require('./schemas/UserSession')(sequelize),
+    WebsiteTheme: require('./schemas/WebsiteTheme')(sequelize),
 };
 
 
 
 /**
  * connect to the databases
- * @param {Object} params 
+ * @param {Object} params - config params.
  */
-module.exports.connect = async(params) => {
-    logger.info('starting db service');
-    // Connect to database
-    await mongoose.connect(process.env.DBURI, {
-        useNewUrlParser: true, 
-        useUnifiedTopology: true 
-    }).then(() => {
-        logger.info('Connected to database!');
-    }).catch((err) => {
-        logger.error(err.stack || err);
-    });
+module.exports.connect = async (params) => {
+    processlog.info('starting db service');
 
+    //connect to database
+    try {
+        await sequelize.authenticate();
+        processlog.success('Connection has been established successfully.');
+    } catch (error) {
+        processlog.error('Unable to connect to the database:', error);
+        process.exit();
+    }
+
+    //connect to redis cache
     const redisDetails = process.env.REDIS.split(':');
     redisClient = new Redis({
         password: redisDetails.length == 3 ? redisDetails[0] : null,
@@ -44,21 +47,22 @@ module.exports.connect = async(params) => {
         if (params.bot == true) {
             redisClient.hget = util.promisify(redisClient.hget);
             redisClient.hgetall = util.promisify(redisClient.hgetall);
+            //if sharding process dont flush cache
             return true;
         }
     }
-    
+
     // Flush redis db
     await redisClient.flushdb(async (err, succeeded) => {
-        logger.info(`Flushing Redis -  ${err ? err : succeeded}`);
+        processlog.info(`Flushing Redis -  ${err ? err : succeeded}`);
         // Cache it only after redis gets flushed
-        logger.info('Started caching the databases');
-  
+        processlog.info('Started caching the databases');
+
         //loop though all scheams and cache them after flush
         for (const [key] of Object.entries(schemas)) {
-            await schemas[key].find({}).then((results) => {
-                for (const document of results) {
-                    redisClient.hset(key, document.id, JSON.stringify(document));
+            await schemas[key].findAll().then((results) => {
+                for (const record of results) {
+                    redisClient.hset(key, record.id, JSON.stringify(record));
                 }
             });
         }
@@ -70,105 +74,122 @@ module.exports.connect = async(params) => {
                 redisclient.hset('lan', file.iso, JSON.stringify(file));
             }
         }
-      return true;
+        return true;
     });
     return true;
 }
 
+/**
+* fall back to database if cant find in cache
+*/
+async function dbFallback(table, id) {
+    // db fallback
+    processlog.info(`${id} just fellback to db while looking for the ${table} table!`);
+    const checkDB = await schemas[table].findOne({ where: { id: key } });
+    if (checkDB == null) return null;
+    await redisClient.hset(table, id, JSON.stringify(checkDB));
+
+    const cacheValue = await redisClient.hget(table, id);
+    return cacheValue;
+}
 
 
 /**
  * lookup a document in the cache and fallback to mongo if its not there
- * @param {String} collection 
- * @param {String} key 
+ * @param {String} table - the table you want to lookup data in
+ * @param {String} id - the id of the data you want to lookup
  * @returns {Object} 
  */
-module.exports.lookup = async (collection, key) => {
-    if (schemas[collection] == null || schemas[collection] == undefined) {
-        logger.error(`${collection} is not a valid collection name`);
+module.exports.lookup = async (table, key) => {
+    if (schemas[table] == null || schemas[table] == undefined) {
+        processlog.error(`${table} is not a valid table name`);
         return null;
     }
-    let cacheValue = await redisClient.hget(collection, key);
+    let cacheValue = await redisClient.hget(table, key);
     let result = null;
 
-    if (cacheValue) {
-      result = JSON.parse(cacheValue);
-    } else {
-        // Mongo fallback
-        if (process.env.DEBUG) logger.info(`${key} just fellback to mongo while looking for the ${collection} collection!`);
-        const checkMongo = await schemas[collection].findOne({id: key});
-        if (checkMongo == null) return null;
+    if (!cacheValue) cacheValue = await dbFallback(table, key);
+    if (cacheValue == null) return null;
 
-        await redisClient.hset(collection, key, JSON.stringify(checkMongo));
-        cacheValue = await redisClient.hget(collection, key);
-        if (cacheValue) {
-            result = JSON.parse(cacheValue);
-        }
-    }
-
-    if (result == null) return null;
+    result = JSON.parse(cacheValue);
     result['save'] = async function () {
-        var mdbupdate;
-        if (schemas[collection] == null || schemas[collection] == undefined) {
-            logger.error(`${collection} is not a valid collection name`);
-            return null;
-        }
-        mdbupdate = await schemas[collection].findOne({id: key});
+        const dbresult = await schemas[table].findOne({ where: { id: key } });
+        let toUpdate = {};
 
         for (const o in result) {
             if (result.hasOwnProperty(o)) {
                 if (o !== 'save') {
-                    mdbupdate[o] = result[o];
+                    if (dbresult[o] != result[o]) {
+                        toUpdate[o] = result[o];
+                    }
                 }
             }
         }
-        await mdbupdate.save();
-        await redisClient.hdel(collection, key);
-        await redisClient.hset(collection, key, JSON.stringify(mdbupdate));
+        //update data in database
+        try {
+            await schemas[table].update(toUpdate, { where: { id } });
+        } catch (err) {
+            processlog.error(err.stack || err);
+            return false;
+        }
+
+        //update data in cache
+        await redisClient.hdel(table, key);
+        await redisClient.hset(table, key, JSON.stringify(dbupdate));
         return true;
     }
+
     return result;
 }
 
 
 /**
  * create a new document in the database and cache it
- * @param {String} collection 
- * @param {String} key 
- * @param {Object} data 
+ * @param {String} table - the table that you want to create data in
+ * @param {String} id - the id you would like to use 
+ * @param {Object} data - rest of the data
  * @returns 
  */
-module.exports.create = async(collection, key, data) => {
-    if (schemas[collection] == null || schemas[collection] == undefined) throw "Error: " + collection + " is not a valid collection name";
-    data.id = key;
-    await schemas[collection].create(data);
-    const lkup = await schemas[collection].findOne({id:key});
-    await redisClient.hset(collection, key, JSON.stringify(lkup));
+module.exports.create = async (table, id, data) => {
+    if (schemas[table] == null || schemas[table] == undefined) throw "Error: " + table + " is not a valid table name";
+    data.id = id;
+    const createData = await schemas[table].create(data);
+    await redisClient.hset(table, createData.id, JSON.stringify(createData));
     return true;
 }
 
 
 /**
- * get all documents in the cached collection
- * @param {String} collection 
+ * get all documents in the cached table
+ * @param {String} table 
  * @returns {Array}
  */
-module.exports.getAll = async(collection) => {
-    if (schemas[collection] == null || schemas[collection] == undefined) throw "Error: " + collection + " is not a valid collection name";
-    const items = await redisClient.hgetall(collection);
+module.exports.getAll = async (table) => {
+    if (schemas[table] == null || schemas[table] == undefined) throw "Error: " + table + " is not a valid table name";
+    const items = await redisClient.hgetall(table);
     return Reflect.ownKeys(items).map((key) => JSON.parse(items[key]));
 }
 
 
 /**
- * delete a ducument from the cache and database
- * @param {String} collection 
- * @param {String} key 
+ * delete a document from the cache and database
+ * @param {String} table 
+ * @param {String} id 
  * @returns {Boolean}
  */
-module.exports.delete = async(collection,key) => {
-    if (schemas[collection] == null || schemas[collection] == undefined) throw "Error: " + collection + " is not a valid collection name";
-    await schemas[collection].deleteOne({id:key});
-    await  redisClient.hdel(collection, key);
+module.exports.delete = async (table, id) => {
+    if (schemas[table] == null || schemas[table] == undefined) throw "Error: " + table + " is not a valid table name";
+    try {
+        await schemas[collection].destroy({ where: { id } });
+    } catch (err) {
+        processlog.error(err.stack || err);
+        throw "Error: could not delete from database"
+    }
+    try {
+        await redisClient.hdel(table, id);
+    } catch (err) {
+        processlog.error(err.stack || err);
+        throw "Error: could not delete from cache"
+    }
     return true;
 }

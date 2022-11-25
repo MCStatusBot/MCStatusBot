@@ -1,18 +1,38 @@
-const { Schema, model } = require("mongoose");
-
-const str = (defaultTxt) =>  defaultTxt ? {type: String, required: true, default: defaultTxt} : {type: String, required: false};
-const bol = { type: Boolean, required: true, default:false };
-
-const userSchema = new Schema({
-    id: str(""),
-    username: str(),
-    email: str("unknown@mcstatusbot.site"),
-    tag: str(),
-    avatar: str(),
-    lan: str("EN"),
-    theme: str("default"),
-    donator: bol,
-    admin:bol
-}, { versionKey: false })
-
-module.exports = model("user", userSchema);
+const { DataTypes } = require("sequelize");
+module.exports = (sequelize) => {
+    const User = sequelize.define('User', {
+        id: {
+            type: DataTypes.INTEGER,
+            autoIncrement: true,
+            primaryKey: true
+        },
+        username: {
+            type: DataTypes.STRING,
+        },
+        discriminator: {
+            type: DataTypes.STRING,
+        },
+        email: {
+            type: DataTypes.STRING,
+        },
+        lan: {
+            type: DataTypes.STRING,
+            defaultValue: "EN"
+        },
+        theme: {
+            type: DataTypes.STRING,
+            defaultValue: "minecraft_ui"
+        },
+        created:  {
+            type: DataTypes.STRING,
+            defaultValue: Date.now().toString(),
+        },
+        admin: {
+            type: DataTypes.BOOLEAN,
+            defaultValue: false
+        },
+    });
+    //adds table to db if it doesnt exist
+    User.sync();
+    return User;
+};

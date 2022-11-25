@@ -5,7 +5,7 @@
  * @param {object} mcServers - all mc servers the discord server has if mmm is disabled
  * @returns {object}
  */
-module.exports = function(guild, mcServer, mcServers) {
+module.exports = function (guild, mcServer, mcServers) {
     /**
      * adds the [[]] parmas to givent text
      * @param {String} text 
@@ -45,19 +45,19 @@ module.exports = function(guild, mcServer, mcServers) {
     function checkLenght(text, type) {
         let maxLenght = 0;
         let shortenTo = 0;
-        switch(type.toLowerCase()) {
+        switch (type.toLowerCase()) {
             case 'title':
                 maxLenght = 256;
-            break;
+                break;
             case 'description':
                 maxLenght = 4096;
-            break;
+                break;
             case 'fieldname':
                 maxLenght = 256;
-            break;
+                break;
             case 'fieldvalue':
                 maxLenght = 1024;
-            break;
+                break;
             default:
                 throw "Error: invalid text type provided"
         }
@@ -67,21 +67,18 @@ module.exports = function(guild, mcServer, mcServers) {
         }
         return false;
     }
-    //TODO: check to see if in single message mode and get all mc servers and add to fields 
-    if (guild.statusMessage.multipleMessageMode) {
-        let embed = {};
-        embed.color = mcServer.online ? guild.statusMessage.color.online :  guild.statusMessage.color.offline;
-        embed.title = addInfo(guild.statusMessage.title);
-        embed.description = addInfo(guild.statusMessage.statusText);
-        embed.thumbnail.url = addInfo(guild.statusMessage.image);
-        //check lenght if too long shorten and add ... after (explanation will be in docs)
-        //TODO: add to faq why is text missing from my embed and ends with ...
-        if(checkLenght(embed.title, 'TITLE') !== false) {
-            embed.title.slice(0, checkLenght(embed.title, 'TITLE')) + '...';
-        }
-        if(checkLenght(embed.description, 'DESCRIPTION') !== false) {
-            embed.description.slice(0, checkLenght(embed.title, 'DESCRIPTION')) + '...';
-        }
-        return embed;
+    let embed = {};
+    embed.color = mcServer.online ? guild.statusMessage.color.online : guild.statusMessage.color.offline;
+    embed.title = addInfo(guild.statusMessage.title);
+    embed.description = addInfo(guild.statusMessage.statusText);
+    embed.thumbnail.url = addInfo(guild.statusMessage.image);
+    //check lenght if too long shorten and add ... after (explanation will be in docs)
+    //TODO: add to faq why is text missing from my embed and ends with ...
+    if (checkLenght(embed.title, 'TITLE') !== false) {
+        embed.title.slice(0, checkLenght(embed.title, 'TITLE')) + '...';
     }
+    if (checkLenght(embed.description, 'DESCRIPTION') !== false) {
+        embed.description.slice(0, checkLenght(embed.title, 'DESCRIPTION')) + '...';
+    }
+    return embed;
 }
