@@ -1,12 +1,36 @@
 # MCStatusBot
-v3 of MC-status-bot 
+[![Discord Bot status](https://top.gg/api/widget/status/816747912888975362.svg)](https://top.gg/bot/816747912888975362) [![Discord Bots](https://top.gg/api/widget/servers/816747912888975362.svg)](https://top.gg/bot/816747912888975362) [![License: MIT](https://img.shields.io/github/license/mashape/apistatus.svg)](/LICENSE) ![node-current](https://img.shields.io/node/v/discord.js)
+[![Discord](https://img.shields.io/discord/892122095235006485?color=blue&label=Discord%20server&logo=discord)](https://mcstatusbot.site/discord?ref=readme) [![donate](https://img.shields.io/badge/Liberapay-donate-green?logo=liberapay)](https://liberapay.com/invaliduser/donate)
 
-this bot is completely free to use you do not need to pay to unlock anything or gain access to this code if you did pay for this code or to unlock something (other than a website theme (which adds no functional value to the bot)) please tell me dev@mcstatusbot.site
+A Discord bot that will display, log and graph the status and statistics of a Minecraft server
 
-you can always donate though using [paypal @404invaliduser](https://paypal.me/404invaliduser) or a whole bunch of other things from cashapp to bank transfer, ~~i also accept check or cold hard cash this is a joke with different countries and all~~.
+this bot is completely free to use you do not need to pay to unlock anything or gain access to this code if you did pay for this code or to unlock something please [contact me](#contact)
 
-you can self host this bot too with the cool guide.
+## Quick Start
+you will need the `manage server` permission to invite the bot and run these commands in the server.
 
-the full bot same everything as the public one [here](https://docs.mcstatusbot.site/selfhosting/)
+- [invite the bot](https://mcstatusbot.site/invite) to your server
 
-a lite one which handles only one discord guild and is easy to setup [here](https://docs.mcstatusbot.site/selfhosting-lite/)
+- add your first Minecraft server to the bot by entering the command `/create-mc-server` then fill out all required fields, take note of the id the bot returns (you might need this in the future eg adding your mc server to another discord server)
+
+- enable message server status by entering the command `/enable-message-status` then fill out all required fields.
+
+- enable channel status by entering the command `/enable-channel-status` then fill out all required fields, the bot will then automatically create a category and one or two voice channels depending on which option you selected.
+
+## Docs
+
+for information on commands, custom text parameters, and APIs check out or docs
+
+[Commands and usage](https://docs.mcstatusbot.site/commands/)
+
+[Custom text parameters](https://docs.mcstatusbot.site/text-params/)
+
+[Self Hosting](https://docs.mcstatusbot.site/self-hosting/)
+
+[API endpoints and how to use them](https://api-docs.mcstatusbot.site/)
+
+
+## Contact
+
+encounter a problem or just find something too complicated? don't hesitate to contact me via email `help@mcstatusbot.site` or in [the discord server](https://mcstatusbot.site/discord?ref=bot-readme)
+

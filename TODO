@@ -8,6 +8,17 @@ https://www.youtube.com/watch?v=9TJx7QTrTyo
 move logger to util dir and other things that would be there
 
 
+copy slash commands from old bot 
+
+clean up slash command code
+
+make index.js file function to loop slash commands make them json and registure the commands taking code from old mcstatus bot code
+
+
+make command handler
+check https://discord.com/channels/783023194965016576/783024991477432340/1045556433623732224 for responce and apply if there was one
+
+
 
 
 setup prom-client to get metrics on
@@ -21,3 +32,22 @@ get client to work with promethius on pi server in home
 
 make dashboard in grafana
 
+
+
+figure out what thing is going on what api or if we need two apis
+
+https://api.mcstatusbot.site/ - bot api
+https://mcstatusbot.site/api/ - website api
+
+
+
+make api docs
+make api
+
+
+
+make website api docs
+make website api
+
+make website front end
+- change version info at bottom to get bot version and then website verison with get request to api root (should give in)
